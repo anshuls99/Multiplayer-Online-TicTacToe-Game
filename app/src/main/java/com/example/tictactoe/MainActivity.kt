@@ -6,6 +6,12 @@ import android.widget.Button
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.analytics.FirebaseAnalytics
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.database.ValueEventListener
+import kotlinx.android.synthetic.main.activity_main.*
+import java.lang.Exception
 
 class MainActivity : AppCompatActivity() {
 
@@ -14,13 +20,22 @@ class MainActivity : AppCompatActivity() {
     var player1 = ArrayList<Int>()
     var player2 = ArrayList<Int>()
 
+    private val database = FirebaseDatabase.getInstance()
+    private val myRef = database.reference
+
+    private var myEmail: String? = null
+
     private var mFirebaseAnalytics: FirebaseAnalytics? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         // Obtain the FirebaseAnalytics instance.
-        mFirebaseAnalytics = FirebaseAnalytics.getInstance(this);
+        mFirebaseAnalytics = FirebaseAnalytics.getInstance(this)
+
+        myEmail = intent.extras!!.getString("email")
+        incomingCalls()
     }
 
     fun buClick(view: View) {
@@ -38,7 +53,9 @@ class MainActivity : AppCompatActivity() {
             R.id.bu8 -> 8
             else -> 9
         }
-        playGame(cellId, buSelected)
+
+        myRef.child("PlayerOnline").child(sessionId!!).child(cellId.toString()).setValue(myEmail)
+
     }
 
 
@@ -50,7 +67,7 @@ class MainActivity : AppCompatActivity() {
             player1.add(cellId)
             activePlayer = 2
         } else {
-            buSelected.text = "0"
+            buSelected.text = "O"
             buSelected.setBackgroundResource(R.color.red)
             player2.add(cellId)
             activePlayer = 1
@@ -61,16 +78,33 @@ class MainActivity : AppCompatActivity() {
         checkWinner()
     }
 
+    fun autoPlay(cellId: Int) {
+
+        val buSelected: Button? = when (cellId) {
+            1 -> bu1
+            2 -> bu2
+            3 -> bu3
+            4 -> bu4
+            5 -> bu5
+            6 -> bu6
+            7 -> bu7
+            8 -> bu8
+            else -> bu9
+        }
+
+        playGame(cellId, buSelected!!)
+    }
+
     private fun checkWinner() {
         val winningPos = arrayOf(
-                arrayOf(1, 2, 3),
-                arrayOf(4, 5, 6),
-                arrayOf(7, 8, 9),
-                arrayOf(1, 4, 7),
-                arrayOf(2, 5, 8),
-                arrayOf(3, 6, 9),
-                arrayOf(1, 5, 9),
-                arrayOf(3, 5, 7)
+            arrayOf(1, 2, 3),
+            arrayOf(4, 5, 6),
+            arrayOf(7, 8, 9),
+            arrayOf(1, 4, 7),
+            arrayOf(2, 5, 8),
+            arrayOf(3, 6, 9),
+            arrayOf(1, 5, 9),
+            arrayOf(3, 5, 7)
         )
 
         for (i in winningPos.indices) {
@@ -119,10 +153,99 @@ class MainActivity : AppCompatActivity() {
             selected.setBackgroundResource(R.color.purple_200)
         }
 
+        myRef.child("PlayerOnline").removeValue()
+
     }
 
-    fun buRequestEvent(view: View) {}
-    fun buAcceptEvent(view: View) {}
 
+    fun buRequestEvent(view: View) {
+        val userEmail = etEmail.text.toString()
+        myRef.child("Users").child(userEmail.split("@")[0]).child("Request").push()
+            .setValue(myEmail)
+
+        playerOnline(myEmail!!.split("@")[0] + userEmail.split("@")[0])
+        playerSymbol = "X"
+        Toast.makeText(this, "Request Sent", Toast.LENGTH_LONG).show()
+    }
+
+    fun buAcceptEvent(view: View) {
+        val userEmail = etEmail.text.toString()
+        myRef.child("Users").child(userEmail.split("@")[0]).child("Request").push()
+            .setValue(myEmail)
+
+        playerOnline(userEmail.split("@")[0] + myEmail!!.split("@")[0])
+        playerSymbol = "O"
+        Toast.makeText(this, "Game Started", Toast.LENGTH_LONG).show()
+    }
+
+    var sessionId: String? = null
+    var playerSymbol: String? = null
+
+    private fun playerOnline(sessionId: String) {
+        this.sessionId = sessionId
+        myRef.child("PlayerOnline").removeValue()
+        myRef.child("PlayerOnline").child(sessionId)
+            .addValueEventListener(object : ValueEventListener {
+
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    try {
+                        player1.clear()
+                        player2.clear()
+                        val td = snapshot.value as HashMap<String, Any>
+                        for (key in td.keys) {
+                            val value = td[key] as String
+
+                            if (value != myEmail) {
+                                activePlayer = if (playerSymbol === "X") 1 else 2
+                            } else {
+                                activePlayer = if (playerSymbol === "X") 2 else 1
+                            }
+
+                            autoPlay(key.toInt())
+
+                        }
+                    } catch (ex: Exception) {
+                    }
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    TODO("Not yet implemented")
+                }
+
+            })
+    }
+
+    var number = 0
+
+    private fun incomingCalls() {
+        myRef.child("Users").child(myEmail!!.toString().split("@")[0]).child("Request")
+            .addValueEventListener(object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    try {
+                        val td = snapshot.value as HashMap<*, *>
+                        for (key in td.keys) {
+                            val value = td[key] as String
+                            etEmail.setText(value)
+
+                            val notify = Notification()
+                            notify.notify(
+                                applicationContext,
+                                value + "wants to play with you",
+                                number
+                            )
+                            number++
+                            myRef.child("Users").child(myEmail!!.toString().split("@")[0])
+                                .child("Request").setValue(true)
+                            break
+                        }
+                    } catch (ex: Exception) {
+                    }
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    TODO("Not yet implemented")
+                }
+            })
+    }
 
 }

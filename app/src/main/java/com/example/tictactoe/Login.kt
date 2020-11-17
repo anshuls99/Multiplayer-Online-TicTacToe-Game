@@ -17,7 +17,8 @@ class Login : AppCompatActivity() {
         super.onStart()
         // Check if user is signed in (non-null) and update UI accordingly.
         val currentUser = mAuth!!.currentUser
-        loadMain(currentUser!!)
+        if(currentUser!=null)
+            loadMain(currentUser)
     }
 
     private var mAuth: FirebaseAuth? = null
@@ -28,7 +29,7 @@ class Login : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_login)
 
-        mAuth = FirebaseAuth.getInstance();
+        mAuth = FirebaseAuth.getInstance()
 
         // Write a message to the database
 
@@ -37,12 +38,12 @@ class Login : AppCompatActivity() {
 
     }
 
-    fun buLoginEvent(view: View) {
+    fun buLoginEvent() {
         loginToFirebase(etEmail.text.toString(), etPassword.text.toString())
     }
 
     private fun loginToFirebase(email: String, password: String) {
-        mAuth!!.signInWithEmailAndPassword(email, password)
+        mAuth!!.createUserWithEmailAndPassword(email, password)
             .addOnCompleteListener(this) { task ->
                 if (task.isSuccessful) {
                     val user = mAuth!!.currentUser
@@ -57,10 +58,14 @@ class Login : AppCompatActivity() {
     }
 
     private fun loadMain(currentUser: FirebaseUser) {
+
+        myRef.child("PlayerOnline").removeValue()
+
         val intent = Intent(this, MainActivity::class.java)
         intent.putExtra("email", currentUser.email)
         intent.putExtra("uid", currentUser.uid)
         startActivity(intent)
+        finish()
     }
 
 
