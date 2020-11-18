@@ -11,7 +11,6 @@ import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.database.ValueEventListener
 import kotlinx.android.synthetic.main.activity_main.*
-import java.lang.Exception
 
 class MainActivity : AppCompatActivity() {
 
@@ -35,6 +34,7 @@ class MainActivity : AppCompatActivity() {
         mFirebaseAnalytics = FirebaseAnalytics.getInstance(this)
 
         myEmail = intent.extras!!.getString("email")
+        resetGame()
         incomingCalls()
     }
 
@@ -55,7 +55,6 @@ class MainActivity : AppCompatActivity() {
         }
 
         myRef.child("PlayerOnline").child(sessionId!!).child(cellId.toString()).setValue(myEmail)
-
     }
 
 
@@ -65,12 +64,10 @@ class MainActivity : AppCompatActivity() {
             buSelected.text = "X"
             buSelected.setBackgroundResource(R.color.green)
             player1.add(cellId)
-            activePlayer = 2
         } else {
             buSelected.text = "O"
             buSelected.setBackgroundResource(R.color.red)
             player2.add(cellId)
-            activePlayer = 1
         }
 
         buSelected.isEnabled = false
@@ -189,20 +186,16 @@ class MainActivity : AppCompatActivity() {
 
                 override fun onDataChange(snapshot: DataSnapshot) {
                     try {
-                        player1.clear()
-                        player2.clear()
                         val td = snapshot.value as HashMap<String, Any>
                         for (key in td.keys) {
                             val value = td[key] as String
-
-                            if (value != myEmail) {
-                                activePlayer = if (playerSymbol === "X") 1 else 2
+                            activePlayer = if (value != myEmail) {
+                                if (playerSymbol === "X") 1 else 2
                             } else {
-                                activePlayer = if (playerSymbol === "X") 2 else 1
+                                if (playerSymbol === "X") 2 else 1
                             }
 
                             autoPlay(key.toInt())
-
                         }
                     } catch (ex: Exception) {
                     }

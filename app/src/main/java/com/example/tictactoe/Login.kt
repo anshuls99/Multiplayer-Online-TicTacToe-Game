@@ -23,7 +23,7 @@ class Login : AppCompatActivity() {
 
     private var mAuth: FirebaseAuth? = null
     private val database = FirebaseDatabase.getInstance()
-    private val myRef = database.getReference("message")
+    private val myRef = database.reference
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,7 +38,7 @@ class Login : AppCompatActivity() {
 
     }
 
-    fun buLoginEvent() {
+    fun buLoginEvent(view: View) {
         loginToFirebase(etEmail.text.toString(), etPassword.text.toString())
     }
 
