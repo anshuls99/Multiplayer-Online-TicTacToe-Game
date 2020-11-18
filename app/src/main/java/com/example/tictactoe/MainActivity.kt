@@ -188,6 +188,7 @@ class MainActivity : AppCompatActivity() {
                     try {
                         val td = snapshot.value as HashMap<String, Any>
                         for (key in td.keys) {
+                            myRef.child("PlayerOnline").child(sessionId).removeValue()
                             val value = td[key] as String
                             activePlayer = if (value != myEmail) {
                                 if (playerSymbol === "X") 1 else 2
